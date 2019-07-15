@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Oracle Speech to Text</title>
+  <link rel="icon" type="image/png" sizes="96x96" href="./favicon-96x96.png">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <!-- Font Awsome-->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+
+<br>
+<br>
+<br>
+<br>
+<a href="https://cloud.oracle.com" target="_blank"><img src="./OracleLogo.png" style="width: 250px; position: absolute; top: 0px; left: 0px;" alt="Oracle Logo" >
+</a>
+<br>
+
+<div class="container mt-8">
+  <h2>Upload your Audio file here</h2>
+  <br>
+    <p>Audio file:</p>
+
+      <div class="custom-file mb-3">
+        <input type="file" class="custom-file-input" accept="audio/*" id="customFile" name="file" onchange="readFile(this.files);">
+        <label class="custom-file-label" for="customFile" id="inputLable">Choose file</label>
+      </div>
+    
+      <div class="mt-3">
+        <button type="button" id="Convert" class="btn btn-success" onclick="Convert()">Convert</button>
+        <button type="button" id="Clear" class="btn btn-danger" onclick="Clear()">Clear</button>
+      </div>
+
+      <br>
+      <br>
+
+      <div id="LoadingBars" style="text-align:center; margin-top: 18%">
+        <div class="spinner-grow text-primary" role="status"></div>
+        <div class="spinner-grow text-secondary" role="status"></div>
+        <div class="spinner-grow text-success" role="status"></div>
+        <div class="spinner-grow text-danger" role="status"></div>
+        <div class="spinner-grow text-warning" role="status"></div>
+      </div>
+
+      <div id="dangerAlert" class="alert alert-danger" role="alert">
+          <img src="./accident.png" alt="accident.png" style="width: 5%; height: 5%;">
+          <span id="dangerText" style="font-weight: bold; font-size:18px; margin: 15px"> 
+          </span>
+      </div>
+
+      <!---- Table Larger shadow ----->
+      <div id="result" class="shadow-lg p-5 mb-5 bg-white rounded">
+          
+          <table class="table">
+              <thead>
+                <h3 style="text-align:center"> Job Details</h3>
+              </thead>
+              <br>
+              <tbody>
+                <tr>
+                  <th scope="row">Id</th>
+                  <td><div id="id"></div></td>
+                </tr>
+                <tr>
+                  <th scope="row">Cost</th>
+                  <td><div id="cost"></div></td>
+                </tr>
+                <tr>
+                  <th scope="row">Balance</th>
+                  <td><div id="balance"></div></td>
+                </tr>
+
+                <tr>
+                  <th scope="row">Created At</th>
+                  <td><div id="created_at"></div></td>
+                </tr>
+
+                <tr>
+                  <th scope="row">Duration</th>
+                  <td><div id="duration"></div></td>
+                </tr>
+                <tr>
+                  <th scope="row">Language</th>
+                  <td><div id="lang"></div></td>
+                </tr>
+                <tr>
+                  <th scope="row">Name Of The File</th>
+                  <td><div id="name"></div></td>
+                </tr>
+                <tr>
+                  <th scope="row">Number Of Words</th>
+                  <td><div id="NumberOfWords"></div></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <br>
+            <br>
+            <br>
+
+            <h4>Transcription:</h4>
+            <div  class="shadow-sm p-3 mb-5 bg-white rounded">
+              <div id="transcription"></div>
+
+              <br>
+              <hr>
+              <button id="downloadText" type="button" class="btn btn-primary" onclick="downloadText()" >Download Text</button>
+            </div>
+            
+      </div>
+</div>
+
+<br>
+<br>
+
+<div class="container mt-8" >
+  <div class="custom-file mb-3">
+      <footer style="text-align: center; font-weight: 600;">
+          © <span style="color: red">Oracle</span> 2019 <a style="color:black" href="https://cloud.oracle.com" target="_blank">Cloud.Oracle.com</a> | All rights reserved
+          <br>
+          <a href = "mailto: basir.navab@oracle.com">Basir.Navab@oracle.com</a> 
+          <br>
+      </footer>
+  </div>     
+</div>
+
+<br>
+<br>
+
+</body>
+</html>
+
+
+<script>
+
+///////////////////////////////////////////////////////////////////
+//////////////////////// Actual code //////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+//--------------------------------------------------------------------
+// showing and hiding an element
+
+function hide(elementId){
+  document.getElementById(elementId).style.display = "none";
+}
+function show(elementId){
+  document.getElementById(elementId).style.display = "block";
+}
+// showing a MSG 
+function msg(elementId, msg){
+  document.getElementById(elementId).innerHTML = msg;
+}
+
+//Disable
+function lock(elementId){
+  document.getElementById(elementId).disabled = true;
+}
+
+//Enable
+function unlock(elementId){
+  document.getElementById(elementId).disabled = false;
+}
+
+// Global variables:
+  var selectedAudioFile;
+  var audioFileName;
+  var transcription = "";
+
+// hide elements
+hide("LoadingBars");
+hide("result");
+hide("dangerAlert");
+
+// disable btns
+lock("Clear");
+lock("Convert");
+
+//-----------------------------
+// replace the name of the file to the input
+  $(".custom-file-input").on("change", function() {
+      var fileName = $(this).val().split("\\").pop();
+      $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+    });
+
+//------------------------------------------ 
+//read the file as soon as they upload it
+function readFile(files) {
+    var fileReader = new FileReader();
+      //fileReader.readAsArrayBuffer(files[0]);
+      fileReader.readAsDataURL(files[0]);
+			fileReader.onload = function(e) {
+        // enable convert btn
+        unlock("Convert");
+        unlock("Clear");
+        selectedAudioFile = e.target.result;
+        console.log(selectedAudioFile);
+        audioFileName = files[0].name;
+				console.log(("Filename: '" + files[0].name + "'"), ( "(" + ((Math.floor(files[0].size/1024/1024*100))/100) + " MB)" ));
+      }
+	}
+
+//------------------------------------------
+// calling the back end to convert the Audio to Text
+function Convert(){
+  console.log(" I got the Audio file from the broswer!" + selectedAudioFile);
+      
+  // make the loading Bars visible and hide the result
+  show("LoadingBars");
+  hide("result");
+
+  if(typeof(selectedAudioFile) == "undefined"){
+    // hide the ploading bars
+    hide("LoadingBars");
+    // please upload your file again msg
+    show("dangerAlert");
+    msg("dangerText","Please upload your audio file again!");
+    setTimeout(function(){ hide("dangerAlert")}, 2000);
+
+  }else{
+    console.log("Sending the request to the back end!");
+
+    $.ajax({
+            url: "https://flej6jyxnbo2y4cjcjpniuqnsu.apigateway.us-phoenix-1.oci.customer-oci.com/v2000/audio-to-text",
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "*/*",
+              "Cache-Control": "no-cache",
+              "cache-control": "no-cache"
+            },
+            data: "{\"selectedAudio\": \"" + selectedAudioFile +"\",\"selectedAudioName\": \""+ audioFileName +"\"}",
+
+            success: function(data) {
+              //hide the loading bars and show the result
+              hide("LoadingBars");
+              show("result");
+              // disableing the conver btn 
+              lock("Convert");
+
+              console.log(data);
+
+              //------------------------------------------
+              // Placing the data 
+              document.getElementById("id").innerHTML = data["firstResponce"]["id"];
+              document.getElementById("cost").innerHTML = data["firstResponce"]["cost"];
+              document.getElementById("balance").innerHTML = data["firstResponce"]["balance"] + " Sec";
+              document.getElementById("created_at").innerHTML = data["secondResponse"]["job"]["created_at"];
+              document.getElementById("duration").innerHTML = data["secondResponse"]["job"]["duration"];
+              document.getElementById("lang").innerHTML = data["secondResponse"]["job"]["lang"];
+              document.getElementById("name").innerHTML = data["secondResponse"]["job"]["name"];
+
+              if(data["secondResponse"]["words"].length == 0){
+                document.getElementById("NumberOfWords").innerHTML = data["secondResponse"]["words"].length;
+              }else{
+                document.getElementById("NumberOfWords").innerHTML = data["secondResponse"]["words"].length - 1;
+              }
+
+              // extracting the context
+              for(var i=0; i< data["secondResponse"]["words"].length; i++){
+                transcription = transcription + " " + data["secondResponse"]["words"][i]["name"].toLowerCase();
+              }
+
+              if(transcription == ""){
+                document.getElementById("transcription").innerHTML = "Your audio is empty!";
+                lock("downloadText");
+              }else{
+                document.getElementById("transcription").innerHTML = transcription;
+                unlock("downloadText");
+              }
+              
+
+                  
+            },
+            error: function(jqXHR, textStatus, err) {
+                // showing Danger mes
+                hide("LoadingBars");
+                console.log('text status '+ textStatus +', err '+err);
+                show("dangerAlert");
+                msg("dangerText", "There is something wrong with the backEnd, we are trying to fix it. Please try later!" );
+                setTimeout(function(){ hide("dangerAlert")}, 8000);
+                
+            }
+        }); 
+
+      }
+
+    }
+
+//------------------------------------------
+//clearing the result
+function Clear(){
+  transcription = "";
+  selectedAudioFile = "";
+  audioFileName = "";
+  hide("LoadingBars");
+  hide("result");
+  hide("dangerAlert");
+  document.getElementById("inputLable").innerHTML= 'Choose file';
+
+  lock("Clear");
+  lock("Convert");
+
+}
+
+//------------------------------------------
+// download Text in txt format
+function downloadText() {
+  var text = transcription;
+  var fileType = "txt";
+  var fileName = audioFileName.split(".")[0] + " transcription";
+
+  var blob = new Blob([text], { type: fileType });
+
+  var a = document.createElement('a');
+  a.download = fileName;
+  a.href = URL.createObjectURL(blob);
+  a.dataset.downloadurl = [fileType, a.download, a.href].join(':');
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 1500);
+}
+
+</script>
+    
